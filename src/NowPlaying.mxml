@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx" 
+					   width="320" height="320" frameRate="30" backgroundColor="#000000" 
+					   creationComplete="init()">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import com.greensock.events.LoaderEvent;
+			import com.greensock.loading.ImageLoader;
+			import com.greensock.loading.LoaderStatus;
+			import com.greensock.loading.XMLLoader;
+			import com.thelab.utils.monster.*;
+			
+			import nl.demonsters.debugger.MonsterDebugger;
+			
+			private var loader					: XMLLoader;
+			private var cover					: ImageLoader;
+			private var coverRequest			: URLRequest;
+			
+			private var debugger				: MonsterDebugger;
+			private var timer					: Timer;
+			
+			private function init():void
+			{
+				debugger = new MonsterDebugger(this);
+				
+				Monster.enableAllLevels();
+				Monster.clear();
+				Monster.info(this, "trying to load");
+				coverRequest = new URLRequest();
+				loader = new XMLLoader("http://www2.radioparadise.com/now_playing.xml", { onComplete: onDataLoaded, onFail: onDataFail, noCache: true });
+				cover = new ImageLoader(coverRequest, { onComplete: onCoverLoaded, onFail: onCoverFail } );
+				
+				timer = new Timer(5000);
+				timer.addEventListener(TimerEvent.TIMER, refresh);
+				
+				refresh();
+			}
+			
+			private function refresh(e:TimerEvent=null):void
+			{
+				Monster.info(this, "REFRESH - loader status: " + loader.status);
+				timer.stop();
+				makeDot(0xff0000);
+				if (loader.status == LoaderStatus.READY || loader.status == LoaderStatus.COMPLETED)
+				{
+					Monster.info(this, "reloading...");
+					loader.load(true);
+				}
+			}
+			
+			private function onDataLoaded(e:LoaderEvent):void
+			{
+				Monster.info(this, "load complete");
+				var result:XML = loader.content as XML;
+				RT_TITLE.text = result..title;
+				RT_ALBUM.text = result..artist + " – " + result..album;
+				
+				coverRequest.url = result..coverart;
+				cover.load(true);
+			}
+			
+			private function onDataFail(e:LoaderEvent):void
+			{
+				Monster.fatal(this, "data fail");
+				Monster.info(this, loader.content);
+			}
+			
+			private function onCoverLoaded(e:LoaderEvent):void
+			{
+				coverHolder.source = cover.content;
+				cover.content.width = coverHolder.width;
+				cover.content.height = coverHolder.height;
+				timer.start();
+				makeDot(0x00ff00);
+			}
+			
+			private function onCoverFail(e:LoaderEvent):void
+			{
+				timer.start();
+				makeDot(0x00ff00);
+			}
+			
+			private function makeDot(c:uint=0xff0000):void
+			{
+				myCanvas.graphics.clear();
+				myCanvas.graphics.beginFill(c, 1);
+				myCanvas.graphics.drawCircle(0, 0, 10);
+				myCanvas.graphics.endFill();
+			}
+			
+			
+			
+		]]>
+	</fx:Script>
+	<s:RichText x="36.7" y="19.45" text="RichText" color="#D2D2D2" width="238" fontSize="20" id="RT_TITLE" textAlign="center"/>
+	<s:RichText x="13.15" y="269.5" text="RichText" color="#D2D2D2" width="288" fontSize="16" id="RT_ALBUM" verticalAlign="top" textAlign="center"/>
+	<mx:Canvas x = "20" y="20" id="myCanvas"  width="28" height="28" borderVisible="false"/>
+	<s:BorderContainer x="60" y="55" width="200" height="200" backgroundAlpha="0.0" borderColor="#FFFFFF">
+		<mx:Image x="4" y="4" width="190" height="190" id="coverHolder"/>
+	</s:BorderContainer>
+</s:WindowedApplication>
